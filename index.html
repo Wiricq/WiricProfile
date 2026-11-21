@@ -83,6 +83,26 @@
             animation-delay: -6s;
         }
 
+        /* Шар сніжинок поверх меню, але без перехоплення кліків */
+        .snow-layer {
+            position: fixed;
+            inset: 0;
+            z-index: 20;
+            pointer-events: none;
+            overflow: hidden;
+        }
+
+        .snowflake {
+            position: absolute;
+            top: 0;
+            left: 0;
+            border-radius: 50%;
+            background: radial-gradient(circle at 35% 35%, #ffffff, rgba(224, 255, 236, 0.78));
+            box-shadow: 0 0 6px rgba(255, 255, 255, 0.65);
+            will-change: transform, opacity;
+            pointer-events: none;
+        }
+
         @keyframes floatGlow {
             0% { transform: translate(0, 0) scale(1); }
             50% { transform: translate(15px, -12px) scale(1.06); }
@@ -106,6 +126,8 @@
             display: flex;
             flex-direction: column;
             gap: 16px;
+            position: relative;
+            z-index: 2;
             transition: max-width 0.4s var(--ease-smooth), gap 0.35s var(--ease-smooth);
         }
 
@@ -129,6 +151,9 @@
         .player-card {
             position: relative;
             overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
             animation-delay: 0.1s;
         }
 
@@ -143,7 +168,7 @@
             border-radius: 24px;
         }
 
-        /* Шар нот, що пливуть зверху картки плейлиста */
+        /* Шар нот зверху картки плейлиста */
         .floating-notes-layer {
             position: absolute;
             inset: 0;
@@ -380,13 +405,6 @@
             color: var(--text-muted);
             font-style: italic;
             letter-spacing: 0.3px;
-        }
-
-        /* Музичний плеєр */
-        .player-card {
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
         }
 
         .player-header {
@@ -741,10 +759,6 @@
             transform: translateY(-1px) scale(0.98);
         }
 
-        .social-link:hover .social-icon {
-            transform: scale(1.1) rotate(-3deg);
-        }
-
         .social-link.full-width {
             grid-column: span 2;
             justify-content: center;
@@ -765,7 +779,7 @@
             justify-content: center;
             align-items: center;
             flex-shrink: 0;
-            transition: transform 0.35s var(--ease-spring);
+            transition: transform 0.35s var(--ease-spring), box-shadow 0.35s var(--ease-smooth);
         }
 
         .tg-bg { background: rgba(34, 158, 217, 0.18); color: #38bdf8; }
@@ -775,6 +789,18 @@
         .discord-bg { background: rgba(88, 101, 242, 0.2); color: #818cf8; }
         .spotify-bg { background: rgba(30, 215, 96, 0.2); color: #2ee85c; }
         .anon-bg { background: rgba(139, 61, 255, 0.24); color: #c084fc; }
+
+        /* Єдина анімація як у Discord для всіх іконок соцмереж при наведенні */
+        @keyframes discordHop {
+            0%, 100% { transform: translateY(-2px) scale(1.1); }
+            40% { transform: translateY(-6px) scale(1.15) rotate(-5deg); }
+            70% { transform: translateY(-1px) scale(1.08) rotate(4deg); }
+        }
+
+        .social-link:hover .social-icon {
+            animation: discordHop 0.65s var(--ease-spring) infinite;
+            box-shadow: 0 0 14px rgba(46, 232, 92, 0.35);
+        }
 
         /* Фінальна фраза внизу */
         .footer-quote {
@@ -859,6 +885,9 @@
     <div class="bg-glow-1"></div>
     <div class="bg-glow-2"></div>
 
+    <!-- Шар маленьких сніжинок, які падають зверху екрану поверх меню -->
+    <div class="snow-layer" id="snowLayer"></div>
+
     <main class="container">
         <!-- Картка профілю — квадрат/область для польоту бульбашок -->
         <section class="card profile-card" id="profileCard">
@@ -894,7 +923,7 @@
                 <div class="vinyl-stack" id="vinylStack">
                     <div class="vinyl-item" data-track="0" data-pos="0" onclick="selectTrack(0)">
                         <div class="vinyl-disc">
-                            <img src="cover1.jpg" alt="Rats" class="vinyl-cover" onerror="this.style.display='none'">
+                            <img src="cover1.jpg" alt="Joy Again" class="vinyl-cover" onerror="this.style.display='none'">
                             <div class="vinyl-grooves"></div>
                             <div class="vinyl-center">
                                 <div class="vinyl-hole"></div>
@@ -903,7 +932,7 @@
                     </div>
                     <div class="vinyl-item" data-track="1" data-pos="1" onclick="selectTrack(1)">
                         <div class="vinyl-disc">
-                            <img src="cover2.jpg" alt="My Baby's Got to Go" class="vinyl-cover" onerror="this.style.display='none'">
+                            <img src="cover2.jpg" alt="Aircraft" class="vinyl-cover" onerror="this.style.display='none'">
                             <div class="vinyl-grooves"></div>
                             <div class="vinyl-center">
                                 <div class="vinyl-hole"></div>
@@ -912,7 +941,7 @@
                     </div>
                     <div class="vinyl-item" data-track="2" data-pos="2" onclick="selectTrack(2)">
                         <div class="vinyl-disc">
-                            <img src="cover3.jpg" alt="Целовались" class="vinyl-cover" onerror="this.style.display='none'">
+                            <img src="cover3.jpg" alt="Капсайз" class="vinyl-cover" onerror="this.style.display='none'">
                             <div class="vinyl-grooves"></div>
                             <div class="vinyl-center">
                                 <div class="vinyl-hole"></div>
@@ -922,8 +951,8 @@
                 </div>
 
                 <div class="track-info" id="trackInfo">
-                    <div class="track-title" id="trackTitle">Rats</div>
-                    <div class="track-artist" id="trackArtist">Joy Again</div>
+                    <div class="track-title" id="trackTitle">Joy Again</div>
+                    <div class="track-artist" id="trackArtist">Track 1</div>
                 </div>
             </div>
 
@@ -1054,12 +1083,12 @@
                 file: "track1.mp3"
             },
             {
-                title: "My Baby's Got to Go",
+                title: "My baby's Got to Go",
                 artist: "Aircraft",
                 file: "track2.mp3"
             },
             {
-                title: "Целовались",
+                title: "Kissed",
                 artist: "CUPSIZE",
                 file: "track3.mp3"
             }
@@ -1104,6 +1133,59 @@
         const waveCanvas = document.getElementById('playlistWaveCanvas');
         const waveCtx = waveCanvas.getContext('2d');
         const notesLayer = document.getElementById('floatingNotesLayer');
+        const snowLayer = document.getElementById('snowLayer');
+
+        // Маленькі сніжинки зверху екрану, які спадають поверх меню
+        const snowFlakes = [];
+        const flakeCount = 36;
+        for (let i = 0; i < flakeCount; i++) {
+            const el = document.createElement('span');
+            el.className = 'snowflake';
+            const size = 2.5 + (i % 4) * 1.15;
+            el.style.width = `${size.toFixed(2)}px`;
+            el.style.height = `${size.toFixed(2)}px`;
+            snowLayer.appendChild(el);
+
+            snowFlakes.push({
+                el,
+                x: Math.random() * (window.innerWidth || 400),
+                y: Math.random() * (window.innerHeight || 800),
+                speedY: 0.55 + (i % 5) * 0.24,
+                driftAmp: 0.35 + (i % 4) * 0.22,
+                driftFreq: 0.012 + (i % 5) * 0.004,
+                phase: Math.random() * Math.PI * 2,
+                baseOpacity: 0.38 + (i % 4) * 0.14
+            });
+        }
+
+        let snowTick = 0;
+        function animateSnow() {
+            snowTick += 1;
+            const vw = window.innerWidth || 400;
+            const vh = window.innerHeight || 800;
+
+            snowFlakes.forEach((f) => {
+                f.y += f.speedY;
+                f.x += Math.sin(snowTick * f.driftFreq + f.phase) * f.driftAmp;
+
+                if (f.y > vh + 12) {
+                    f.y = -12;
+                    f.x = Math.random() * vw;
+                }
+                if (f.x < -12) {
+                    f.x = vw + 10;
+                } else if (f.x > vw + 12) {
+                    f.x = -10;
+                }
+
+                const shimmer = 0.8 + 0.2 * Math.sin(snowTick * 0.04 + f.phase);
+                f.el.style.opacity = (f.baseOpacity * shimmer).toFixed(3);
+                f.el.style.transform = `translate3d(${f.x.toFixed(1)}px, ${f.y.toFixed(1)}px, 0)`;
+            });
+
+            requestAnimationFrame(animateSnow);
+        }
+        animateSnow();
 
         let audioCtx = null;
         let gainNode = null;
@@ -1157,7 +1239,6 @@
         const smoothHeights = new Array(barCount).fill(0);
         let waveTick = 0;
 
-        // Створення літаючих нот зверху картки плейлиста з плавним розгоном/зупинкою
         const noteGlyphs = ["♪", "♫", "♩", "♬"];
         const notes = [];
         for (let i = 0; i < 9; i++) {
@@ -1249,17 +1330,16 @@
                 }
             }
 
-            // Оновлення плавних нот зверху картки плейлиста
             const topBandHeight = Math.max(68, h * 0.38);
             const flowCurve = playFlowFactor * playFlowFactor * (3 - 2 * playFlowFactor);
 
             notes.forEach((n) => {
-                n.y -= n.speedY * (0.2 + 0.85 * volFactor) * flowCurve;
+                n.y -= n.speedY * (0.15 + 0.9 * volFactor) * flowCurve;
                 if (n.y < -18) {
                     n.y = topBandHeight;
                 }
 
-                const swayX = Math.sin(waveTick * n.swayFreq + n.phase) * n.swayAmp * (0.25 + 0.75 * flowCurve);
+                const swayX = Math.sin(waveTick * n.swayFreq + n.phase) * n.swayAmp * flowCurve;
                 const posX = n.xRatio * Math.max(40, w - 28) + swayX;
                 const rot = Math.sin(waveTick * n.swayFreq * 0.8 + n.phase) * n.rotBase * flowCurve;
 
@@ -1268,10 +1348,12 @@
                     Math.max(0, (n.y + 18) / 22),
                     Math.max(0, (topBandHeight - n.y) / 24)
                 );
-                const opacity = flowCurve * edgeFade * (0.35 + 0.45 * volFactor);
+                const idleOpacity = 0.28 + 0.08 * Math.sin(waveTick * 0.025 + n.phase);
+                const playingOpacity = edgeFade * (0.42 + 0.45 * volFactor);
+                const opacity = idleOpacity + (playingOpacity - idleOpacity) * flowCurve;
 
                 n.el.style.opacity = opacity.toFixed(3);
-                n.el.style.transform = `translate3d(${posX.toFixed(1)}px, ${n.y.toFixed(1)}px, 0) rotate(${rot.toFixed(1)}deg) scale(${(0.85 + 0.2 * flowCurve).toFixed(3)})`;
+                n.el.style.transform = `translate3d(${posX.toFixed(1)}px, ${n.y.toFixed(1)}px, 0) rotate(${rot.toFixed(1)}deg) scale(${(0.88 + 0.18 * flowCurve).toFixed(3)})`;
             });
 
             requestAnimationFrame(renderPlaylistWave);
@@ -1317,8 +1399,8 @@
                 dy = Math.sin(randAngle);
             }
 
-            bubble.vx += dx * 2.2;
-            bubble.vy += dy * 2.2;
+            bubble.vx += dx * (2.0 + bubble.baseSpeed * 1.4);
+            bubble.vy += dy * (2.0 + bubble.baseSpeed * 1.4);
             bubble.jellyPhase = 0.01;
             bubble.jellyAmp = 0.28;
             bubble.shapeIndex = (bubble.shapeIndex + 1) % morphShapes.length;
@@ -1340,6 +1422,8 @@
             { rx: 0.80, ry: 0.84 }
         ];
 
+        const bubbleSpeeds = [0.24, 0.92, 0.42, 1.15, 0.65, 1.38];
+
         bubbleSets.forEach((candidates, i) => {
             const el = document.createElement('div');
             el.className = 'floating-bubble';
@@ -1357,7 +1441,7 @@
             profileCard.appendChild(el);
 
             const angle = (i / bubbleSets.length) * Math.PI * 2 + 0.4;
-            const speed = 0.44 + (i % 3) * 0.12;
+            const speed = bubbleSpeeds[i % bubbleSpeeds.length];
 
             const bubble = {
                 el,
@@ -1397,7 +1481,7 @@
             const avCenterX = avatarWrapper.offsetLeft + avatarWrapper.offsetWidth / 2;
             const avCenterY = avatarWrapper.offsetTop + avatarWrapper.offsetHeight / 2;
             const avRadius = avatarWrapper.offsetWidth / 2;
-            const bounceDist = avRadius + bRadius + 4;
+            const bounceDist = avRadius + bRadius + 8;
 
             bubbles.forEach((b) => {
                 if (b.x === null || b.y === null) {
@@ -1408,27 +1492,27 @@
                 let dx = b.x - avCenterX;
                 let dy = b.y - avCenterY;
                 let dist = Math.hypot(dx, dy);
-                const pushZone = bounceDist + 10;
+                const pushZone = bounceDist + 16;
 
                 if (dist < pushZone) {
                     const safeDist = dist > 0.001 ? dist : 1;
                     const nx = dx / safeDist;
                     const ny = dy / safeDist;
-                    const closeness = (pushZone - dist) / 10;
-                    b.vx += nx * 0.14 * closeness;
-                    b.vy += ny * 0.14 * closeness;
+                    const closeness = (pushZone - dist) / 16;
+                    b.vx += nx * 0.22 * closeness;
+                    b.vy += ny * 0.22 * closeness;
                 }
 
-                b.vx += Math.cos(tick * 0.015 + b.phase) * 0.008;
-                b.vy += Math.sin(tick * 0.013 + b.phase) * 0.008;
+                b.vx += Math.cos(tick * (0.012 + b.baseSpeed * 0.006) + b.phase) * (0.005 + b.baseSpeed * 0.006);
+                b.vy += Math.sin(tick * (0.011 + b.baseSpeed * 0.006) + b.phase) * (0.005 + b.baseSpeed * 0.006);
 
                 const curSpeed = Math.hypot(b.vx, b.vy);
                 if (curSpeed > b.baseSpeed * 2.2) {
                     b.vx *= 0.95;
                     b.vy *= 0.95;
-                } else if (curSpeed < b.baseSpeed * 0.65 && curSpeed > 0.001) {
-                    b.vx *= 1.02;
-                    b.vy *= 1.02;
+                } else if (curSpeed < b.baseSpeed * 0.72 && curSpeed > 0.001) {
+                    b.vx *= 1.03;
+                    b.vy *= 1.03;
                 }
 
                 b.x += b.vx;
@@ -1446,15 +1530,17 @@
 
                     const dot = b.vx * nx + b.vy * ny;
                     if (dot < 0) {
-                        b.vx -= 2.1 * dot * nx;
-                        b.vy -= 2.1 * dot * ny;
+                        b.vx -= 2.25 * dot * nx;
+                        b.vy -= 2.25 * dot * ny;
                     }
-                    const minOutward = Math.max(0.65, b.baseSpeed * 1.15);
+                    const minOutward = Math.max(0.75, b.baseSpeed * 1.25);
                     const newDot = b.vx * nx + b.vy * ny;
                     if (newDot < minOutward) {
                         b.vx += (minOutward - newDot) * nx;
                         b.vy += (minOutward - newDot) * ny;
                     }
+                    b.jellyPhase = 0.01;
+                    b.jellyAmp = Math.max(b.jellyAmp, 0.16);
                 }
 
                 const minX = pad + bRadius;
@@ -1495,7 +1581,8 @@
                 const imgDriftX = Math.cos(tick * 0.03 + b.phase) * 2.2;
                 const imgDriftY = Math.sin(tick * 0.025 + b.phase) * 2.2;
 
-                if (tick - b.lastShapeTick >= 75) {
+                const morphInterval = Math.max(40, Math.round(95 / (0.6 + b.baseSpeed)));
+                if (tick - b.lastShapeTick >= morphInterval) {
                     b.lastShapeTick = tick;
                     b.shapeIndex = (b.shapeIndex + 1) % morphShapes.length;
                     b.el.style.borderRadius = morphShapes[b.shapeIndex];
