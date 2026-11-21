@@ -256,7 +256,6 @@
             transition: border-radius 0.9s var(--ease-smooth), box-shadow 0.35s var(--ease-smooth), border-color 0.35s var(--ease-smooth);
         }
 
-        /* Делікатна підсвітка при наведенні без втечі */
         .floating-bubble:hover {
             border-color: rgba(255, 255, 255, 0.9);
             box-shadow:
@@ -854,7 +853,7 @@
                 <div class="vinyl-stack" id="vinylStack">
                     <div class="vinyl-item" data-track="0" data-pos="0" onclick="selectTrack(0)">
                         <div class="vinyl-disc">
-                            <img src="cover1.jpg" alt="Делать это трезвым" class="vinyl-cover" onerror="this.style.display='none'">
+                            <img src="cover1.jpg" alt="Rats" class="vinyl-cover" onerror="this.style.display='none'">
                             <div class="vinyl-grooves"></div>
                             <div class="vinyl-center">
                                 <div class="vinyl-hole"></div>
@@ -863,7 +862,7 @@
                     </div>
                     <div class="vinyl-item" data-track="1" data-pos="1" onclick="selectTrack(1)">
                         <div class="vinyl-disc">
-                            <img src="cover2.jpg" alt="Palace 2" class="vinyl-cover" onerror="this.style.display='none'">
+                            <img src="cover2.jpg" alt="My Baby's Got to Go" class="vinyl-cover" onerror="this.style.display='none'">
                             <div class="vinyl-grooves"></div>
                             <div class="vinyl-center">
                                 <div class="vinyl-hole"></div>
@@ -872,7 +871,7 @@
                     </div>
                     <div class="vinyl-item" data-track="2" data-pos="2" onclick="selectTrack(2)">
                         <div class="vinyl-disc">
-                            <img src="cover3.jpg" alt="My Baby's Got to Go" class="vinyl-cover" onerror="this.style.display='none'">
+                            <img src="cover3.jpg" alt="Целовались" class="vinyl-cover" onerror="this.style.display='none'">
                             <div class="vinyl-grooves"></div>
                             <div class="vinyl-center">
                                 <div class="vinyl-hole"></div>
@@ -882,8 +881,8 @@
                 </div>
 
                 <div class="track-info" id="trackInfo">
-                    <div class="track-title" id="trackTitle">Делать это трезвым</div>
-                    <div class="track-artist" id="trackArtist">Валентин Стрыкало</div>
+                    <div class="track-title" id="trackTitle">Rats</div>
+                    <div class="track-artist" id="trackArtist">Joy Again</div>
                 </div>
             </div>
 
@@ -1103,7 +1102,6 @@
 
         const bubbles = [];
 
-        // Реакція лише на натискання (клік мишкою або тап пальцем), без втечі при наведенні
         function tapBubble(bubble, clientX, clientY) {
             const rect = bubble.el.getBoundingClientRect();
             const cx = rect.left + rect.width / 2;
@@ -1136,7 +1134,6 @@
             }, 450);
         }
 
-        // Початкові позиції по всій картці профілю (навколо аватарки та ніка)
         const startPositions = [
             { rx: 0.16, ry: 0.22 },
             { rx: 0.84, ry: 0.22 },
@@ -1200,11 +1197,9 @@
             const bRadius = 27;
             const pad = 12;
 
-            // Реальні координати центру й радіус аватарки всередині картки профілю
             const avCenterX = avatarWrapper.offsetLeft + avatarWrapper.offsetWidth / 2;
             const avCenterY = avatarWrapper.offsetTop + avatarWrapper.offsetHeight / 2;
             const avRadius = avatarWrapper.offsetWidth / 2;
-            // Чітка межа відштовхування: бульбашка не заходить за аватарку і не перекриває її
             const bounceDist = avRadius + bRadius + 4;
 
             bubbles.forEach((b) => {
@@ -1213,7 +1208,6 @@
                     b.y = cardH * b.initRy;
                 }
 
-                // Пружне відштовхування від аватарки ще на підльоті до її краю
                 let dx = b.x - avCenterX;
                 let dy = b.y - avCenterY;
                 let dist = Math.hypot(dx, dy);
@@ -1228,11 +1222,9 @@
                     b.vy += ny * 0.14 * closeness;
                 }
 
-                // Легке плавне похитування течії
                 b.vx += Math.cos(tick * 0.015 + b.phase) * 0.008;
                 b.vy += Math.sin(tick * 0.013 + b.phase) * 0.008;
 
-                // М'яке повернення швидкості до спокійного дрейфу після кліку
                 const curSpeed = Math.hypot(b.vx, b.vy);
                 if (curSpeed > b.baseSpeed * 2.2) {
                     b.vx *= 0.95;
@@ -1245,7 +1237,6 @@
                 b.x += b.vx;
                 b.y += b.vy;
 
-                // Жорстке відштовхування від контуру аватарки, щоб бульбашка не заходила за неї
                 dx = b.x - avCenterX;
                 dy = b.y - avCenterY;
                 dist = Math.hypot(dx, dy);
@@ -1261,7 +1252,6 @@
                         b.vx -= 2.1 * dot * nx;
                         b.vy -= 2.1 * dot * ny;
                     }
-                    // Додаємо легкий відскік назовні при торканні краю аватарки
                     const minOutward = Math.max(0.65, b.baseSpeed * 1.15);
                     const newDot = b.vx * nx + b.vy * ny;
                     if (newDot < minOutward) {
@@ -1270,7 +1260,6 @@
                     }
                 }
 
-                // Відбивання від меж квадрату картки профілю (де аватарка і нік)
                 const minX = pad + bRadius;
                 const maxX = Math.max(minX + 10, cardW - pad - bRadius);
                 const minY = pad + bRadius;
@@ -1292,7 +1281,6 @@
                     b.vy = -Math.abs(b.vy);
                 }
 
-                // Желейна пульсація при кліку + постійне рідке дихання
                 let jellyX = 1;
                 let jellyY = 1;
                 if (b.jellyAmp > 0.002) {
@@ -1324,14 +1312,12 @@
         }
         animateBubbles();
 
-        // Плавний рух живого фону за курсором миші
         document.addEventListener('mousemove', (e) => {
             const x = (e.clientX / window.innerWidth - 0.5) * 24;
             const y = (e.clientY / window.innerHeight - 0.5) * 24;
             liveBg.style.transform = `translate3d(${x}px, ${y}px, 0) scale(1.06)`;
         });
 
-        // Плавне оновлення при повороті телефона
         window.addEventListener('orientationchange', () => {
             window.scrollTo({ top: 0, behavior: 'smooth' });
         });
