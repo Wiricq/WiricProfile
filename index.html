@@ -127,7 +127,45 @@
         }
 
         .player-card {
+            position: relative;
+            overflow: hidden;
             animation-delay: 0.1s;
+        }
+
+        /* Фоновий еквалайзер усередині картки плейлиста */
+        .playlist-wave-bg {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            pointer-events: none;
+            border-radius: 24px;
+        }
+
+        /* Шар нот, що пливуть зверху картки плейлиста */
+        .floating-notes-layer {
+            position: absolute;
+            inset: 0;
+            z-index: 2;
+            pointer-events: none;
+            overflow: hidden;
+            border-radius: 24px;
+        }
+
+        .music-note {
+            position: absolute;
+            top: 0;
+            left: 0;
+            color: var(--accent-lime);
+            filter: drop-shadow(0 0 8px rgba(46, 232, 92, 0.55));
+            will-change: transform, opacity;
+            user-select: none;
+        }
+
+        .player-card > *:not(.playlist-wave-bg):not(.floating-notes-layer) {
+            position: relative;
+            z-index: 1;
         }
 
         .socials-grid {
@@ -838,7 +876,10 @@
         </section>
 
         <!-- Музичний плеєр -->
-        <section class="card player-card">
+        <section class="card player-card" id="playerCard">
+            <canvas class="playlist-wave-bg" id="playlistWaveCanvas"></canvas>
+            <div class="floating-notes-layer" id="floatingNotesLayer"></div>
+
             <div class="player-header">
                 <span>Playlist</span>
                 <div class="track-dots" id="trackDots">
@@ -1008,14 +1049,14 @@
     <script>
         const tracks = [
             {
-                title: "My Baby's Got to Go",
-                artist: "Aircraft",
-                file: "track2.mp3"
-            },
-            {
                 title: "Rats",
                 artist: "Joy Again",
                 file: "track1.mp3"
+            },
+            {
+                title: "My Baby's Got to Go",
+                artist: "Aircraft",
+                file: "track2.mp3"
             },
             {
                 title: "Целовались",
@@ -1059,27 +1100,183 @@
         const liveBg = document.getElementById('liveBg');
         const profileCard = document.getElementById('profileCard');
         const avatarWrapper = document.getElementById('avatarWrapper');
+        const playerCard = document.getElementById('playerCard');
+        const waveCanvas = document.getElementById('playlistWaveCanvas');
+        const waveCtx = waveCanvas.getContext('2d');
+        const notesLayer = document.getElementById('floatingNotesLayer');
 
         let audioCtx = null;
         let gainNode = null;
+        let analyserNode = null;
+        let freqData = null;
         let currentVolume = 0.7;
 
         function initWebAudioGain() {
             if (!audioCtx) {
                 const AudioContextClass = window.AudioContext || window.webkitAudioContext;
                 if (AudioContextClass) {
-                    audioCtx = new AudioContextClass();
-                    const source = audioCtx.createMediaElementSource(audio);
-                    gainNode = audioCtx.createGain();
-                    gainNode.gain.value = currentVolume;
-                    source.connect(gainNode);
-                    gainNode.connect(audioCtx.destination);
+                    try {
+                        audioCtx = new AudioContextClass();
+                        const source = audioCtx.createMediaElementSource(audio);
+                        analyserNode = audioCtx.createAnalyser();
+                        analyserNode.fftSize = 128;
+                        analyserNode.smoothingTimeConstant = 0.78;
+                        freqData = new Uint8Array(analyserNode.frequencyBinCount);
+
+                        gainNode = audioCtx.createGain();
+                        gainNode.gain.value = currentVolume;
+
+                        source.connect(analyserNode);
+                        analyserNode.connect(gainNode);
+                        gainNode.connect(audioCtx.destination);
+                    } catch (e) {
+                        analyserNode = null;
+                        gainNode = null;
+                    }
                 }
             }
             if (audioCtx && audioCtx.state === 'suspended') {
-                audioCtx.resume();
+                audioCtx.resume().catch(() => {});
             }
         }
+
+        function resizeWaveCanvas() {
+            const dpr = Math.min(window.devicePixelRatio || 1, 2);
+            const w = playerCard.clientWidth;
+            const h = playerCard.clientHeight;
+            if (w > 0 && h > 0) {
+                waveCanvas.width = Math.floor(w * dpr);
+                waveCanvas.height = Math.floor(h * dpr);
+                waveCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            }
+        }
+        resizeWaveCanvas();
+        window.addEventListener('resize', resizeWaveCanvas);
+
+        const barCount = 34;
+        const smoothHeights = new Array(barCount).fill(0);
+        let waveTick = 0;
+
+        // Створення літаючих нот зверху картки плейлиста з плавним розгоном/зупинкою
+        const noteGlyphs = ["♪", "♫", "♩", "♬"];
+        const notes = [];
+        for (let i = 0; i < 9; i++) {
+            const el = document.createElement('span');
+            el.className = 'music-note';
+            el.textContent = noteGlyphs[i % noteGlyphs.length];
+            const size = 13 + (i % 4) * 3;
+            el.style.fontSize = `${size}px`;
+            notesLayer.appendChild(el);
+
+            notes.push({
+                el,
+                xRatio: 0.1 + ((i * 0.105) % 0.8),
+                y: 8 + (i % 3) * 18,
+                speedY: 0.28 + (i % 3) * 0.11,
+                swayAmp: 6 + (i % 3) * 3.5,
+                swayFreq: 0.025 + (i % 4) * 0.006,
+                phase: i * 1.15,
+                rotBase: (i % 2 === 0 ? 1 : -1) * (8 + (i % 3) * 5)
+            });
+        }
+
+        let playFlowFactor = 0;
+
+        function renderPlaylistWave() {
+            waveTick += 1;
+            const targetFlow = isPlaying ? 1 : 0;
+            const flowEase = targetFlow > playFlowFactor ? 0.022 : 0.018;
+            playFlowFactor += (targetFlow - playFlowFactor) * flowEase;
+            if (Math.abs(playFlowFactor - targetFlow) < 0.0005) {
+                playFlowFactor = targetFlow;
+            }
+
+            const w = playerCard.clientWidth;
+            const h = playerCard.clientHeight;
+            waveCtx.clearRect(0, 0, w, h);
+
+            let hasRealAudio = false;
+            if (isPlaying && analyserNode && freqData) {
+                analyserNode.getByteFrequencyData(freqData);
+                let sum = 0;
+                for (let i = 0; i < 24; i++) sum += freqData[i];
+                if (sum > 12) hasRealAudio = true;
+            }
+
+            const volFactor = Math.max(0.05, currentVolume);
+            const maxBarHeight = h * 0.56;
+
+            for (let i = 0; i < barCount; i++) {
+                let targetNorm = 0;
+                if (playFlowFactor > 0.002) {
+                    if (hasRealAudio) {
+                        const binIdx = Math.min(
+                            freqData.length - 1,
+                            Math.floor((i / barCount) * (freqData.length * 0.65))
+                        );
+                        targetNorm = (freqData[binIdx] / 255) * (0.55 + 0.65 * volFactor) * playFlowFactor;
+                    } else {
+                        const waveA = 0.5 + 0.5 * Math.sin(waveTick * 0.085 + i * 0.42);
+                        const waveB = 0.5 + 0.5 * Math.cos(waveTick * 0.055 - i * 0.27);
+                        targetNorm = (0.18 + 0.62 * waveA * waveB) * volFactor * playFlowFactor;
+                    }
+                }
+
+                targetNorm = Math.min(1, Math.max(0, targetNorm));
+                const ease = targetNorm > smoothHeights[i] ? 0.28 : 0.12;
+                smoothHeights[i] += (targetNorm - smoothHeights[i]) * ease;
+
+                const barH = smoothHeights[i] * maxBarHeight;
+                if (barH > 1.2) {
+                    const gap = 3;
+                    const totalGaps = gap * (barCount - 1);
+                    const usableW = Math.max(20, w - 24);
+                    const barW = Math.max(3, (usableW - totalGaps) / barCount);
+                    const x = 12 + i * (barW + gap);
+                    const y = h - barH;
+
+                    const grad = waveCtx.createLinearGradient(0, y, 0, h);
+                    const alpha = Math.min(0.46, 0.14 + smoothHeights[i] * 0.34);
+                    grad.addColorStop(0, `rgba(122, 255, 71, ${alpha.toFixed(3)})`);
+                    grad.addColorStop(0.65, `rgba(46, 232, 92, ${(alpha * 0.78).toFixed(3)})`);
+                    grad.addColorStop(1, `rgba(46, 232, 92, 0.03)`);
+
+                    waveCtx.fillStyle = grad;
+                    waveCtx.beginPath();
+                    const r = Math.min(barW / 2, 5, barH / 2);
+                    waveCtx.roundRect(x, y, barW, barH, [r, r, 0, 0]);
+                    waveCtx.fill();
+                }
+            }
+
+            // Оновлення плавних нот зверху картки плейлиста
+            const topBandHeight = Math.max(68, h * 0.38);
+            const flowCurve = playFlowFactor * playFlowFactor * (3 - 2 * playFlowFactor);
+
+            notes.forEach((n) => {
+                n.y -= n.speedY * (0.2 + 0.85 * volFactor) * flowCurve;
+                if (n.y < -18) {
+                    n.y = topBandHeight;
+                }
+
+                const swayX = Math.sin(waveTick * n.swayFreq + n.phase) * n.swayAmp * (0.25 + 0.75 * flowCurve);
+                const posX = n.xRatio * Math.max(40, w - 28) + swayX;
+                const rot = Math.sin(waveTick * n.swayFreq * 0.8 + n.phase) * n.rotBase * flowCurve;
+
+                const edgeFade = Math.min(
+                    1,
+                    Math.max(0, (n.y + 18) / 22),
+                    Math.max(0, (topBandHeight - n.y) / 24)
+                );
+                const opacity = flowCurve * edgeFade * (0.35 + 0.45 * volFactor);
+
+                n.el.style.opacity = opacity.toFixed(3);
+                n.el.style.transform = `translate3d(${posX.toFixed(1)}px, ${n.y.toFixed(1)}px, 0) rotate(${rot.toFixed(1)}deg) scale(${(0.85 + 0.2 * flowCurve).toFixed(3)})`;
+            });
+
+            requestAnimationFrame(renderPlaylistWave);
+        }
+        renderPlaylistWave();
 
         audio.src = tracks[0].file;
         audio.volume = currentVolume;
@@ -1320,6 +1517,7 @@
 
         window.addEventListener('orientationchange', () => {
             window.scrollTo({ top: 0, behavior: 'smooth' });
+            setTimeout(resizeWaveCanvas, 150);
         });
 
         function formatTime(seconds) {
